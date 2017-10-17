@@ -15,7 +15,12 @@ RNN::RNN(unsigned lexicSize, unsigned hiddenSize, unsigned seqLength)
 		dWhh(Matrix::Zero(hiddenSize, hiddenSize)),
 		dWhy(Matrix::Zero(lexicSize, hiddenSize)),
 		dbh(Matrix::Zero(hiddenSize, 1)), 
-		dby(Matrix::Zero(lexicSize, 1))
+		dby(Matrix::Zero(lexicSize, 1)),
+		mWxh(Matrix::Zero(hiddenSize,lexicSize)),
+		mWhh(Matrix::Zero(hiddenSize, hiddenSize)),
+		mWhy(Matrix::Zero(lexicSize, hiddenSize)),
+		mbh(Matrix::Zero(hiddenSize, 1)), 
+		mby(Matrix::Zero(lexicSize, 1))
 {
 	std::cout << Wxh.unaryExpr(&RNN::tanh) << std::endl;
 	std::cout << std::endl;
@@ -25,7 +30,7 @@ RNN::RNN(unsigned lexicSize, unsigned hiddenSize, unsigned seqLength)
 void RNN::forward(std::vector<unsigned> &inputs) 
 {
 	hs.push_back(hprev);
-	for (unsigned i = 0; i < inputs.size(); ++i) {
+	for (int i = 0; i < static_cast<int>(inputs.size()); ++i) {
 		xs.push_back(Matrix::Zero(lexicSize, 1));
 		xs.back()(inputs[i], 0) = 1;
 		hs.push_back((Wxh * xs.back() + Whh * hs.back() + bh).unaryExpr(&RNN::tanh));
@@ -46,10 +51,40 @@ void RNN::backProp(std::vector<unsigned> &targets)
 	dbh.setZero(); 
 	dby.setZero(); 
 	
+	Matrix dhnext = Matrix::Zero(lexicSize, 1);
+	for (int i = targets.size() - 1; i >= 0; --i) {
+		Matrix dy = ps[i];
+		dy(targets[i], 0) -= 1;
+		dWhy += dy * hs[i].transpose();
+		dby += dy;
+		Matrix dh = Why.transpose() * dy + dhnext;
+		Matrix dhraw = dh.unaryExpr(&RNN::dtanh) * dh;
+		dbh += dhraw;
+		dWxh += dhraw * xs[i].transpose();
+		dWhh += dhraw * hs[i - 1].transpose();
+		dhnext = Whh.transpose() * dhraw;
+	}
+
+	dWxh.unaryExpr(&RNN::clip); 
+	dWhh.unaryExpr(&RNN::clip); 
+	dWhy.unaryExpr(&RNN::clip); 
+	dbh.unaryExpr(&RNN::clip); 
+	dby.unaryExpr(&RNN::clip); 
+}
+
+void RNN::adagrad(Matrix& param, Matrix& dparam, Matrix& mem)
+{
+	mem += dparam * dparam;
+	param += -learningRate * dparam * mem.inverse();
 }
 
 void RNN::update()
 {
+	adagrad(Wxh, dWxh, mWxh);
+	adagrad(Whh, dWhh, mWhh);
+	adagrad(Why, dWhy, mWhy);
+	adagrad(bh, dbh, mbh);
+	adagrad(by, dby, mby);	
 
 	xs.clear();
 	hs.clear();
