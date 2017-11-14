@@ -2,7 +2,7 @@ CC = clang++
 BIN = rnn
 OBJS = rnn.o main.o
 RM = rm -rvf
-CXXFLAGS += -std=c++14 -Wall -v
+CXXFLAGS += -std=c++14 -Wall -v -g
 
 all: $(BIN)
 

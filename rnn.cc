@@ -11,15 +11,16 @@ RNN::RNN(unsigned lexicSize, unsigned hiddenSize, unsigned seqLength)
 		Why(Matrix::Random(lexicSize, hiddenSize) * 0.01),
 		bh(Matrix::Zero(hiddenSize, 1)),
 		by(Matrix::Zero(lexicSize, 1)),
+        hprev(Matrix::Zero(hiddenSize, 1)),
 		dWxh(Matrix::Zero(hiddenSize, lexicSize)),
 		dWhh(Matrix::Zero(hiddenSize, hiddenSize)),
 		dWhy(Matrix::Zero(lexicSize, hiddenSize)),
-		dbh(Matrix::Zero(hiddenSize, 1)), 
+		dbh(Matrix::Zero(hiddenSize, 1)),
 		dby(Matrix::Zero(lexicSize, 1)),
 		mWxh(Matrix::Zero(hiddenSize,lexicSize)),
 		mWhh(Matrix::Zero(hiddenSize, hiddenSize)),
 		mWhy(Matrix::Zero(lexicSize, hiddenSize)),
-		mbh(Matrix::Zero(hiddenSize, 1)), 
+		mbh(Matrix::Zero(hiddenSize, 1)),
 		mby(Matrix::Zero(lexicSize, 1))
 {
 	std::cout << Wxh.unaryExpr(&RNN::tanh) << std::endl;
@@ -27,7 +28,7 @@ RNN::RNN(unsigned lexicSize, unsigned hiddenSize, unsigned seqLength)
 	std::cout << bh << std::endl;
 }
 
-void RNN::forward(std::vector<unsigned> &inputs) 
+void RNN::forward(std::vector<unsigned> &inputs)
 {
 	hs.push_back(hprev);
 	for (int i = 0; i < static_cast<int>(inputs.size()); ++i) {
@@ -46,11 +47,11 @@ void RNN::forward(std::vector<unsigned> &inputs)
 void RNN::backProp(std::vector<unsigned> &targets)
 {
 	dWxh.setZero();
-	dWhh.setZero(); 
-	dWhy.setZero(); 
-	dbh.setZero(); 
-	dby.setZero(); 
-	
+	dWhh.setZero();
+	dWhy.setZero();
+	dbh.setZero();
+	dby.setZero();
+
 	Matrix dhnext = Matrix::Zero(lexicSize, 1);
 	for (int i = targets.size() - 1; i >= 0; --i) {
 		Matrix dy = ps[i];
@@ -65,11 +66,11 @@ void RNN::backProp(std::vector<unsigned> &targets)
 		dhnext = Whh.transpose() * dhraw;
 	}
 
-	dWxh.unaryExpr(&RNN::clip); 
-	dWhh.unaryExpr(&RNN::clip); 
-	dWhy.unaryExpr(&RNN::clip); 
-	dbh.unaryExpr(&RNN::clip); 
-	dby.unaryExpr(&RNN::clip); 
+	dWxh.unaryExpr(&RNN::clip);
+	dWhh.unaryExpr(&RNN::clip);
+	dWhy.unaryExpr(&RNN::clip);
+	dbh.unaryExpr(&RNN::clip);
+	dby.unaryExpr(&RNN::clip);
 }
 
 void RNN::adagrad(Matrix& param, Matrix& dparam, Matrix& mem)
@@ -84,7 +85,7 @@ void RNN::update()
 	adagrad(Whh, dWhh, mWhh);
 	adagrad(Why, dWhy, mWhy);
 	adagrad(bh, dbh, mbh);
-	adagrad(by, dby, mby);	
+	adagrad(by, dby, mby);
 
 	xs.clear();
 	hs.clear();
