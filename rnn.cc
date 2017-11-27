@@ -52,17 +52,17 @@ void RNN::backProp(std::vector<unsigned> &targets)
 	dbh.setZero();
 	dby.setZero();
 
-	Matrix dhnext = Matrix::Zero(lexicSize, 1);
+	Matrix dhnext = Matrix::Zero(hiddenSize, 1);
 	for (int i = targets.size() - 1; i >= 0; --i) {
 		Matrix dy = ps[i];
 		dy(targets[i], 0) -= 1;
-		dWhy += dy * hs[i].transpose();
+		dWhy += dy * hs[i + 1].transpose();
 		dby += dy;
 		Matrix dh = Why.transpose() * dy + dhnext;
-		Matrix dhraw = dh.unaryExpr(&RNN::dtanh) * dh;
+		Matrix dhraw = hs[i + 1].unaryExpr(&RNN::dtanh).cwiseProduct(dh);
 		dbh += dhraw;
 		dWxh += dhraw * xs[i].transpose();
-		dWhh += dhraw * hs[i - 1].transpose();
+		dWhh += dhraw * hs[i].transpose();
 		dhnext = Whh.transpose() * dhraw;
 	}
 
