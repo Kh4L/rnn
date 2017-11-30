@@ -4,14 +4,24 @@
 #include <map>
 #include "rnn.h"
 
-std::vector<char> load(std::ifstream &datafs, unsigned count)
+std::vector<char> load(std::ifstream &datafs, unsigned count, bool training)
 {
-	if (datafs.eof()) {
+    char *cinput = new char[count];
+	datafs.read(cinput, count);
+    //std::cout << datafs.gcount() << " chars read :\n";
+    //std::cout << cinput << '\n';
+    //std::cin.get();
+
+    if (training && datafs.gcount() < count) {
   		datafs.clear();
 		datafs.seekg(0, std::ios::beg);
-	}
-	std::vector<char> input (count);
-	datafs.read(&input[0], count);
+    }
+
+	std::vector<char> input;
+    for (int i = 0; i < datafs.gcount(); ++i) {
+       input.push_back(cinput[i]);
+    }
+    delete[] cinput;
 	return input;
 }
 
@@ -38,7 +48,7 @@ void buildDicts(std::set<char> &vocab,
 
 int main(int argc, const char ** argv)
 {
-	RNN rnn(10, 40, 30);
+    const unsigned seqLen = 31;
 
 	std::set<char> vocab;
 	std::vector<char> intToChar;
@@ -46,10 +56,7 @@ int main(int argc, const char ** argv)
 
 	std::ifstream datafs("input.txt");
 	while (!datafs.eof()) {
-		std::vector<char> input = load(datafs, 31);
-		for (auto &c : input) {
-			std::cout << c;
-		}
+		std::vector<char> input = load(datafs, seqLen, false);
 		addchars(vocab, input);
 	}
 	buildDicts(vocab, intToChar, charToInt);
@@ -58,9 +65,21 @@ int main(int argc, const char ** argv)
 		std::cout << intToChar[i] << " => " << charToInt[intToChar[i]] << std::endl;
 	}
 
+	RNN rnn(vocab.size(), 40, seqLen - 1);
+
+    unsigned long long iter = 0;
 	datafs.seekg(0, std::ios::beg);
 	while (!datafs.eof()) {
-		std::vector<char> seq = load(datafs, 31);
+		std::vector<char> seq = load(datafs, seqLen, true);
+        if (seq.size() < seqLen)
+            continue;
+
+        if (iter % 500 == 0) {
+            std::cout << "Iteration " << iter << std::endl;
+            std::cout << std::string(seq.begin(), seq.end()) << std::endl;
+        }
+
+        // Building inputs and targets
 		std::vector<unsigned> inputs;
 		for (auto &c: seq){
 			inputs.push_back(charToInt[c]);
@@ -71,6 +90,7 @@ int main(int argc, const char ** argv)
 
         rnn.forward(inputs);
         rnn.backProp(targets);
+        iter++;
 	}
 
 	return 0;
