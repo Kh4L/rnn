@@ -12,6 +12,7 @@ public:
 	void forward(std::vector<unsigned> &inputs);
 	void backProp(std::vector<unsigned> &targets);
 	void update();
+    std::vector<unsigned> generate(unsigned seed, unsigned int iter);
 
 	static double tanh(double x)
 	{
@@ -29,6 +30,10 @@ public:
 		return std::exp(x);
 	}
 
+    static double adagradInv(double x)
+    {
+        return 1 / x + 1e-8;
+    }
 	static double clip(double x)
 	{
 		if (x > 5)

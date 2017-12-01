@@ -77,6 +77,7 @@ int main(int argc, const char ** argv)
         if (iter % 500 == 0) {
             std::cout << "Iteration " << iter << std::endl;
             std::cout << std::string(seq.begin(), seq.end()) << std::endl;
+            rnn.generate(0, 30);
         }
 
         // Building inputs and targets
@@ -90,6 +91,7 @@ int main(int argc, const char ** argv)
 
         rnn.forward(inputs);
         rnn.backProp(targets);
+        rnn.update();
         iter++;
 	}
 
