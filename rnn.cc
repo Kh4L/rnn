@@ -21,7 +21,8 @@ RNN::RNN(unsigned lexicSize, unsigned hiddenSize, unsigned seqLength)
 		mWhh(Matrix::Zero(hiddenSize, hiddenSize)),
 		mWhy(Matrix::Zero(lexicSize, hiddenSize)),
 		mbh(Matrix::Zero(hiddenSize, 1)),
-		mby(Matrix::Zero(lexicSize, 1))
+		mby(Matrix::Zero(lexicSize, 1)),
+    gen(rd())
 {
 	std::cout << Wxh.unaryExpr(&RNN::tanh) << std::endl;
 	std::cout << std::endl;
@@ -33,7 +34,6 @@ void RNN::forward(std::vector<unsigned> &inputs)
 	hs.push_back(hprev);
 	for (int i = 0; i < static_cast<int>(inputs.size()); ++i) {
         //Matrix x = Matrix::Zero(lexicSize, 1);
-
 		xs.push_back(Matrix::Zero(lexicSize, 1));
 		xs.back()(inputs[i], 0) = 1;
 
@@ -81,8 +81,11 @@ void RNN::backProp(std::vector<unsigned> &targets)
 void RNN::adagrad(Matrix& param, Matrix& dparam, Matrix& mem)
 {
 	mem += dparam.cwiseProduct(dparam);
-    // alpha * dparam / (mem + 1e-8)
+  //std::cout << mem << std::endl;
+
+  // alpha * dparam / sqrt(mem + 1e-8)
 	param += (-learningRate * dparam).cwiseProduct(mem.unaryExpr(&RNN::adagradInv));
+  //std::cout << param << std::endl;
 }
 
 void RNN::update()
@@ -104,6 +107,7 @@ std::vector<unsigned> RNN::generate(unsigned seed, unsigned iter)
     std::vector<unsigned> out;
     Matrix x = Matrix::Zero(lexicSize, 1);
     x(seed, 0) = 1;
+    unsigned iprev = seed;
     Matrix h = hprev;
     for (unsigned i = 0; i < iter; ++i) {
         h = Wxh * x + Whh * h + bh;
@@ -111,8 +115,19 @@ std::vector<unsigned> RNN::generate(unsigned seed, unsigned iter)
         Matrix y = Why * h + by;
         Matrix yexp = y.unaryExpr(&RNN::exp);
         Matrix p = yexp / yexp.sum();
-        if (i == 0)
-            std::cout << p;
+        //if (i == 0)
+        //    std::cout << p;
+        //std::cout << std::endl;
+
+        double *data = p.data();
+        if (i == 0) {
+          for (unsigned j = 0; j < lexicSize; ++j)
+              std::cout << data[j] << std::endl;
+          std::cout << std::endl;
+        }
+        std::discrete_distribution<> dd (data, data + lexicSize);
+        unsigned ix = dd(gen);
+        out.push_back(ix);
         //ix = np.random.choice(range(vocab_size), p=p.ravel())
         //x = np.zeros((vocab_size, 1))
         //x[ix] = 1

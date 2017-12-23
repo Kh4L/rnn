@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <Eigen/Dense>
+#include <random>
 
 using Matrix = Eigen::MatrixXd;
 
@@ -32,7 +33,7 @@ public:
 
     static double adagradInv(double x)
     {
-        return 1 / x + 1e-8;
+        return 1 / std::sqrt(x + 1e-8);
     }
 	static double clip(double x)
 	{
@@ -81,5 +82,8 @@ private:
 	Matrix mWhy;
 	Matrix mbh;
 	Matrix mby;
+
+  std::random_device rd;
+  std::mt19937 gen;
 
 };

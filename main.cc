@@ -67,32 +67,37 @@ int main(int argc, const char ** argv)
 
 	RNN rnn(vocab.size(), 40, seqLen - 1);
 
-    unsigned long long iter = 0;
+  unsigned long long iter = 0;
 	datafs.seekg(0, std::ios::beg);
 	while (!datafs.eof()) {
 		std::vector<char> seq = load(datafs, seqLen, true);
-        if (seq.size() < seqLen)
-            continue;
+    if (seq.size() < seqLen)
+        continue;
 
-        if (iter % 500 == 0) {
-            std::cout << "Iteration " << iter << std::endl;
-            std::cout << std::string(seq.begin(), seq.end()) << std::endl;
-            rnn.generate(0, 30);
+    if (iter % 500 == 0) {
+        std::cout << "Iteration " << iter << std::endl;
+        std::cout << std::string(seq.begin(), seq.end()) << std::endl;
+        std::vector<unsigned> results = rnn.generate(0, 30);
+        std::stringstream sstream;
+        for (auto &c : results) {
+          sstream << intToChar[c];
         }
+        std::cout << sstream.str() << std::endl;
+    }
 
-        // Building inputs and targets
+    // Building inputs and targets
 		std::vector<unsigned> inputs;
 		for (auto &c: seq){
 			inputs.push_back(charToInt[c]);
 		}
-        std::vector<unsigned> targets = inputs;
-        inputs.pop_back();
-        targets.erase(targets.begin());
+    std::vector<unsigned> targets = inputs;
+    inputs.pop_back();
+    targets.erase(targets.begin());
 
-        rnn.forward(inputs);
-        rnn.backProp(targets);
-        rnn.update();
-        iter++;
+    rnn.forward(inputs);
+    rnn.backProp(targets);
+    rnn.update();
+    iter++;
 	}
 
 	return 0;
